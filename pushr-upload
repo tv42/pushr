@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import optparse
 import os
+import sha
 import sys
 import ConfigParser
 import pushr
@@ -39,7 +40,7 @@ api = pushr.FlickrAPI(
     shared_secret=shared_secret,
     )
 
-tickets = set()
+tickets = {}
 
 for filename in args:
     f = file(filename, 'rb')
@@ -51,5 +52,32 @@ for filename in args:
                             tags=options.tags,
                             )
         print '.. ticket %s' % ticket
+        tickets[ticket] = filename
     finally:
         f.close()
+
+while tickets:
+    print 'Polling for status..'
+    for status in api.checkTickets(*tickets.keys()):
+        ticket_id, photo_id = status
+        path = tickets[ticket_id]
+        if photo_id is None:
+            print 'Upload failed: %s' % path
+        else:
+            print 'Upload complete: %s' % path
+            f = file(path)
+            try:
+                s = sha.new()
+                while True:
+                    data = f.read(32768)
+                    if not data:
+                        break
+                    s.update(data)
+            finally:
+                f.close()
+
+            print '%s %s' % (photo_id, s.hexdigest())
+            print 'SHA-1 added.'
+        del tickets[ticket_id]
+
+print 'Done.'

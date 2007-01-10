@@ -26,7 +26,7 @@ class FlickrAPI(object):
         kw['api_key'] = self.api_key
         kw['api_sig'] = self.sign(**kw)
 
-        self._callRemote(method, **kw)
+        return self._callRemote(method, **kw)
 
     def _callRemote(self, method, **kw):
         fn = getattr(self.xmlrpc, method)
@@ -122,3 +122,34 @@ class FlickrAPI(object):
             print 'No ticket'
             print ElementTree.tostring(tree)
         return ticket
+
+    def checkTickets(self, *tickets):
+        tickets = set(tickets)
+        ticketstring = ','.join([str(tkt) for tkt in tickets])
+        response = self.callRemote('flickr.photos.upload.checkTickets',
+                                   tickets=ticketstring)
+        tree = ElementTree.fromstring(response)
+        print ElementTree.tostring(tree)
+
+        for ticket in tree.findall('ticket'):
+            ticket_id = ticket.attrib['id']
+            if ticket_id not in tickets:
+                # unexpected response, ignore
+                continue
+
+            if ticket.attrib['complete'] == '0':
+                # just skip unfinished tickets
+                continue
+            elif ticket.attrib['complete'] == '1':
+                # complete
+                photo_id = ticket.attrib['photoid']
+                yield (ticket_id, photo_id)
+                tickets.remove(ticket_id)
+            elif ticket.attrib['complete'] == '2':
+                # failed
+                yield (ticket_id, None)
+                tickets.remove(ticket_id)
+            else:
+                raise RuntimeError('Bad response from FlickrAPI: '
+                                   +'checkTickets output: %r'
+                                   % ElementTree.tostring(ticket))
