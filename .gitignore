@@ -1,1 +1,4 @@
 *.py[co]
+/_trial_temp
+/images.flickr.sha1
+/images.flickr.sha1.*.tmp
