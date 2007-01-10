@@ -1,0 +1,88 @@
+#!/usr/bin/python
+import errno
+import itertools
+import optparse
+import os
+import sha
+import sys
+import urllib
+import ConfigParser
+import flickr
+
+parser = optparse.OptionParser(usage="%prog")
+
+CONFIG_PATH = os.path.expanduser('~/.pushr.conf')
+cfg = ConfigParser.RawConfigParser()
+try:
+    f = file(CONFIG_PATH)
+except IOError, e:
+    parser.error('cannot open config file: %s' % e)
+try:
+    cfg.readfp(f)
+finally:
+    f.close()
+
+try:
+    api_key = cfg.get('flickr', 'api-key')
+    username = cfg.get('flickr', 'username')
+except (ConfigParser.NoSectionError,
+        ConfigParser.NoOptionError), e:
+    parser.error('config incomplete: %s' % e)
+
+flickr.API_KEY = api_key
+
+user = flickr.people_findByUsername(username)
+
+FILENAME = 'images.flickr.sha1'
+TMPNAME = '%s.%d.tmp' % (FILENAME, os.getpid())
+
+known_photos = set()
+
+tmp = file(TMPNAME, 'w')
+try:
+    try:
+        f = file(FILENAME)
+    except IOError, e:
+        if e.errno == errno.ENOENT:
+            pass
+        else:
+            raise
+    else:
+        try:
+            for line in f:
+                line = line.strip('\n')
+                photo_id, sha1sum = line.split(None, 1)
+                known_photos.add(photo_id)
+                print >>tmp, '%s %s' % (photo_id, sha1sum)
+        finally:
+            f.close()
+
+    for page in itertools.count(1):
+        photos = flickr.people_getPublicPhotos(user_id=user.id,
+                                               per_page=500,
+                                               page=page)
+        if not photos:
+            break
+        for photo in photos:
+            if photo.id in known_photos:
+                continue
+            url = photo.getURL(size='Original',
+                               urlType='source')
+            print >>sys.stderr, 'Fetching %s from %s' % (photo.id, url)
+            f = urllib.urlopen(url)
+            s = sha.new()
+            while True:
+                data = f.read(32768)
+                if not data:
+                    break
+                s.update(data)
+            f.close()
+
+            known_photos.add(photo.id)
+            print >>tmp, '%s %s' % (photo_id, s.hexdigest())
+            tmp.flush()
+
+finally:
+    tmp.close()
+
+os.rename(TMPNAME, FILENAME)

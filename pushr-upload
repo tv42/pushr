@@ -1,0 +1,55 @@
+#!/usr/bin/python
+import optparse
+import os
+import sys
+import ConfigParser
+import pushr
+
+parser = optparse.OptionParser(usage="%prog [OPTS] FILE..")
+parser.add_option('--title',
+                  action='store')
+parser.add_option('--tags',
+                  action='store')
+options, args = parser.parse_args()
+
+if not args:
+    parser.error("need files to upload")
+
+CONFIG_PATH = os.path.expanduser('~/.pushr.conf')
+cfg = ConfigParser.RawConfigParser()
+try:
+    f = file(CONFIG_PATH)
+except IOError, e:
+    parser.error('cannot open config file: %s' % e)
+try:
+    cfg.readfp(f)
+finally:
+    f.close()
+
+try:
+    api_key = cfg.get('flickr', 'api-key')
+    shared_secret = cfg.get('flickr', 'shared-secret')
+    token = cfg.get('flickr', 'token')
+except (ConfigParser.NoSectionError,
+        ConfigParser.NoOptionError), e:
+    parser.error('config incomplete: %s' % e)
+
+api = pushr.FlickrAPI(
+    api_key=api_key,
+    shared_secret=shared_secret,
+    )
+
+tickets = set()
+
+for filename in args:
+    f = file(filename, 'rb')
+    try:
+        print 'Uploading %s' % filename
+        ticket = api.upload(fp=f,
+                            auth_token=token,
+                            title=options.title,
+                            tags=options.tags,
+                            )
+        print '.. ticket %s' % ticket
+    finally:
+        f.close()
