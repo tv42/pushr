@@ -79,7 +79,7 @@ try:
             f.close()
 
             known_photos.add(photo.id)
-            print >>tmp, '%s %s' % (photo_id, s.hexdigest())
+            print >>tmp, '%s %s' % (photo.id, s.hexdigest())
             tmp.flush()
 
 finally:
