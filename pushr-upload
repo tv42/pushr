@@ -3,8 +3,9 @@ import optparse
 import os
 import sha
 import sys
+import time
 import ConfigParser
-import pushr
+from pushr import api, contentmatch
 
 parser = optparse.OptionParser(usage="%prog [OPTS] FILE..")
 parser.add_option('--title',
@@ -35,7 +36,7 @@ except (ConfigParser.NoSectionError,
         ConfigParser.NoOptionError), e:
     parser.error('config incomplete: %s' % e)
 
-api = pushr.FlickrAPI(
+api = api.FlickrAPI(
     api_key=api_key,
     shared_secret=shared_secret,
     )
@@ -56,6 +57,7 @@ for filename in args:
     finally:
         f.close()
 
+matcher = contentmatch.ContentMatch(filename='images.flickr.sha1')
 while tickets:
     print 'Polling for status..'
     for status in api.checkTickets(*tickets.keys()):
@@ -64,7 +66,7 @@ while tickets:
         if photo_id is None:
             print 'Upload failed: %s' % path
         else:
-            print 'Upload complete: %s' % path
+            print 'Upload complete: %s -> %s' % (path, photo_id)
             f = file(path)
             try:
                 s = sha.new()
@@ -76,8 +78,14 @@ while tickets:
             finally:
                 f.close()
 
-            print '%s %s' % (photo_id, s.hexdigest())
+            matcher.add(photo_id=photo_id,
+                        sha1sum=s.hexdigest())
+            matcher.flush()
             print 'SHA-1 added.'
         del tickets[ticket_id]
 
+    if tickets:
+        time.sleep(1)
+
+matcher.commit()
 print 'Done.'

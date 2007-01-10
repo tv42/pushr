@@ -129,7 +129,6 @@ class FlickrAPI(object):
         response = self.callRemote('flickr.photos.upload.checkTickets',
                                    tickets=ticketstring)
         tree = ElementTree.fromstring(response)
-        print ElementTree.tostring(tree)
 
         for ticket in tree.findall('ticket'):
             ticket_id = ticket.attrib['id']
