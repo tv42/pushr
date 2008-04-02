@@ -158,30 +158,30 @@ class FlickrAPI(object):
         ticketstring = ','.join([str(tkt) for tkt in tickets])
         response = self.callRemote('flickr.photos.upload.checkTickets',
                                    tickets=ticketstring)
-        tree = ElementTree.fromstring(response)
+        response = response['uploader']
 
-        for ticket in tree.findall('ticket'):
-            ticket_id = ticket.attrib['id']
+        for ticket in response['ticket']:
+            ticket_id = ticket['id']
             if ticket_id not in tickets:
                 # unexpected response, ignore
                 continue
 
-            if ticket.attrib['complete'] == '0':
+            if ticket['complete'] == '0':
                 # just skip unfinished tickets
                 continue
-            elif ticket.attrib['complete'] == '1':
+            elif ticket['complete'] == '1':
                 # complete
-                photo_id = ticket.attrib['photoid']
+                photo_id = ticket['photoid']
                 yield (ticket_id, photo_id)
                 tickets.remove(ticket_id)
-            elif ticket.attrib['complete'] == '2':
+            elif ticket['complete'] == '2':
                 # failed
                 yield (ticket_id, None)
                 tickets.remove(ticket_id)
             else:
                 raise RuntimeError('Bad response from FlickrAPI: '
                                    +'checkTickets output: %r'
-                                   % ElementTree.tostring(ticket))
+                                   % ticket)
 
     def people_findByUsername(self, username):
         r = self.callRemote_unsigned(
