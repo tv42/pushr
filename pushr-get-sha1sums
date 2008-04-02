@@ -7,8 +7,7 @@ import sha
 import sys
 import urllib
 import ConfigParser
-import flickr
-from pushr import contentmatch
+from pushr import api, contentmatch
 
 parser = optparse.OptionParser(usage="%prog")
 
@@ -30,35 +29,41 @@ except (ConfigParser.NoSectionError,
         ConfigParser.NoOptionError), e:
     parser.error('config incomplete: %s' % e)
 
-flickr.API_KEY = api_key
-
-user = flickr.people_findByUsername(username)
+api = api.FlickrAPI(
+    api_key=api_key,
+    shared_secret=None,
+    )
+user = api.people_findByUsername(username)
 
 update = contentmatch.ContentMatch(filename='images.flickr.sha1')
 
 for page in itertools.count(1):
-    photos = flickr.people_getPublicPhotos(user_id=user.id,
-                                           per_page=500,
-                                           page=page)
+    photos = api.people_getPublicPhotos(
+        user_id=user['id'],
+        per_page=500,
+        page=page,
+        )
     if not photos:
         break
-    for photo in photos:
-        if update.isKnown(photo.id):
+    for photo in photos['photo']:
+        if update.isKnown(photo['id']):
             continue
-        url = photo.getURL(size='Original',
-                           urlType='source')
-        print >>sys.stderr, 'Fetching %s from %s' % (photo.id, url)
-        f = urllib.urlopen(url)
-        s = sha.new()
-        while True:
-            data = f.read(32768)
-            if not data:
-                break
-            s.update(data)
-        f.close()
+        for size in api.photos_getSizes(photo_id=photo['id'])['size']:
+            if size['label'] != 'Original':
+                continue
+            url = size['source']
+            print >>sys.stderr, 'Fetching %s from %s' % (photo['id'], url)
+            f = urllib.urlopen(url)
+            s = sha.new()
+            while True:
+                data = f.read(32768)
+                if not data:
+                    break
+                s.update(data)
+            f.close()
 
-        update.add(photo_id=photo.id,
-                   sha1sum=s.hexdigest())
-        update.flush()
+            update.add(photo_id=photo['id'],
+                       sha1sum=s.hexdigest())
+            update.flush()
 
 update.commit()

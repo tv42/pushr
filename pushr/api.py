@@ -1,5 +1,12 @@
-import xmlrpclib, md5, urllib, urlparse, mimetools, mimetypes, httplib
+import md5, urllib, urlparse, mimetools, mimetypes, httplib
 from xml.etree import ElementTree
+import simplejson
+
+class FlickrError(Exception):
+    """Flickr API failed"""
+
+    def __str__(self):
+        return '%s: %r' % (self.__doc__, self.args[0])
 
 class FlickrAPI(object):
     api_key = None
@@ -9,8 +16,6 @@ class FlickrAPI(object):
         self.api_key = kw.pop('api_key')
         self.shared_secret = kw.pop('shared_secret')
         super(FlickrAPI, self).__init__(**kw)
-
-        self.xmlrpc = xmlrpclib.ServerProxy(uri='http://api.flickr.com/services/xmlrpc/')
 
     def sign(self, **kw):
         m = md5.new()
@@ -29,8 +34,19 @@ class FlickrAPI(object):
         return self._callRemote(method, **kw)
 
     def _callRemote(self, method, **kw):
-        fn = getattr(self.xmlrpc, method)
-        return fn(kw)
+        kw.update(dict(
+                method=method,
+                format='json',
+                nojsoncallback=1,
+                ))
+        query = urllib.urlencode(kw)
+        url = 'http://api.flickr.com/services/rest/?%s' % query
+        c = urllib.urlopen(url)
+        obj = simplejson.load(c)
+        c.close()
+        if obj['stat'] != 'ok':
+            raise FlickrError(obj)
+        return obj
 
     def getFrobURL(self, frob, mode='write'):
         data = dict(
@@ -152,3 +168,36 @@ class FlickrAPI(object):
                 raise RuntimeError('Bad response from FlickrAPI: '
                                    +'checkTickets output: %r'
                                    % ElementTree.tostring(ticket))
+
+    def people_findByUsername(self, username):
+        r = self._callRemote(
+            'flickr.people.findByUsername',
+            api_key=self.api_key,
+            username=username,
+            )
+        r = r['user']
+        r['username'] = r['username']['_content']
+        return r
+
+    def people_getPublicPhotos(
+        self,
+        user_id,
+        **kw
+        ):
+        r = self._callRemote(
+            'flickr.people.getPublicPhotos',
+            api_key=self.api_key,
+            user_id=user_id,
+            **kw
+            )
+        r = r['photos']
+        return r
+
+    def photos_getSizes(self, photo_id):
+        r = self._callRemote(
+            'flickr.photos.getSizes',
+            api_key=self.api_key,
+            photo_id=photo_id,
+            )
+        r = r['sizes']
+        return r

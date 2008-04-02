@@ -1,6 +1,5 @@
 #!/usr/bin/python
 import os, sys, errno, urllib, sha, itertools
-import flickr
 
 FILENAME = 'images.flickr.sha1'
 
