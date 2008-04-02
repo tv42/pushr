@@ -27,18 +27,29 @@ class FlickrAPI(object):
             m.update(str(v))
         return m.hexdigest()
 
-    def callRemote(self, method, **kw):
-        kw['api_key'] = self.api_key
-        kw['api_sig'] = self.sign(**kw)
-
-        return self._callRemote(method, **kw)
-
-    def _callRemote(self, method, **kw):
+    def _prepare_call(self, method, kw, **override):
         kw.update(dict(
                 method=method,
+                api_key=self.api_key,
                 format='json',
                 nojsoncallback=1,
                 ))
+        kw.update(override)
+        return kw
+
+    def callRemote(self, method, **kw):
+        kw = self._prepare_call(
+            method,
+            kw,
+            )
+        kw['api_sig'] = self.sign(**kw)
+        return self.__callRemote(**kw)
+
+    def callRemote_unsigned(self, method, **kw):
+        kw = self._prepare_call(method, kw)
+        return self.__callRemote(**kw)
+
+    def __callRemote(self, **kw):
         query = urllib.urlencode(kw)
         url = 'http://api.flickr.com/services/rest/?%s' % query
         c = urllib.urlopen(url)
@@ -66,6 +77,9 @@ class FlickrAPI(object):
 
     def getToken(self, frob):
         r = self.callRemote('flickr.auth.getToken', frob=frob)
+        r = r['auth']
+        r['perms'] = r['perms']['_content']
+        r['token'] = r['token']['_content']
         return r
 
     def upload(self,
@@ -170,9 +184,8 @@ class FlickrAPI(object):
                                    % ElementTree.tostring(ticket))
 
     def people_findByUsername(self, username):
-        r = self._callRemote(
+        r = self.callRemote_unsigned(
             'flickr.people.findByUsername',
-            api_key=self.api_key,
             username=username,
             )
         r = r['user']
@@ -184,9 +197,8 @@ class FlickrAPI(object):
         user_id,
         **kw
         ):
-        r = self._callRemote(
+        r = self.callRemote_unsigned(
             'flickr.people.getPublicPhotos',
-            api_key=self.api_key,
             user_id=user_id,
             **kw
             )
@@ -194,9 +206,8 @@ class FlickrAPI(object):
         return r
 
     def photos_getSizes(self, photo_id):
-        r = self._callRemote(
+        r = self.callRemote_unsigned(
             'flickr.photos.getSizes',
-            api_key=self.api_key,
             photo_id=photo_id,
             )
         r = r['sizes']
