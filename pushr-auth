@@ -4,6 +4,11 @@ import os
 import ConfigParser
 from pushr import api
 
+parser = optparse.OptionParser(usage="%prog")
+options, args = parser.parse_args()
+if args:
+    parser.error("did not expect any arguments")
+
 CONFIG_PATH = os.path.expanduser('~/.pushr.conf')
 cfg = ConfigParser.RawConfigParser()
 try:
