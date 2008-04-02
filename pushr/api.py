@@ -1,5 +1,5 @@
 import xmlrpclib, md5, urllib, urlparse, mimetools, mimetypes, httplib
-from elementtree import ElementTree
+from xml.etree import ElementTree
 
 class FlickrAPI(object):
     api_key = None
