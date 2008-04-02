@@ -1,0 +1,50 @@
+#!/usr/bin/python
+import optparse
+import os
+import ConfigParser
+from pushr import api
+
+CONFIG_PATH = os.path.expanduser('~/.pushr.conf')
+cfg = ConfigParser.RawConfigParser()
+try:
+    f = file(CONFIG_PATH)
+except IOError, e:
+    parser.error('cannot open config file: %s' % e)
+try:
+    cfg.readfp(f)
+finally:
+    f.close()
+
+try:
+    api_key = cfg.get('flickr', 'api-key')
+    shared_secret = cfg.get('flickr', 'shared-secret')
+except (ConfigParser.NoSectionError,
+        ConfigParser.NoOptionError), e:
+    parser.error('config incomplete: %s' % e)
+
+api = api.FlickrAPI(
+    api_key=api_key,
+    shared_secret=shared_secret,
+    )
+
+r = api.callRemote('flickr.auth.getFrob')
+frob = r['frob']['_content']
+print 'Your frob is: %s' % frob
+url = api.getFrobURL(frob)
+print 'Please authorize pushr at: %s' % url
+print
+print 'Press enter when you have authorized pushr,'
+print 'or press control-C to abort.'
+print
+print '[Press ENTER]'
+raw_input()
+info = api.getToken(frob)
+print
+print 'Your token is: %s' % info['token']
+print
+print 'Please add your token to ~/.pushr.conf, for example:'
+print
+print '[flickr]'
+print 'token = %s' % info['token']
+print
+
