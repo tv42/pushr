@@ -165,16 +165,15 @@ class FlickrAPI(object):
             if ticket_id not in tickets:
                 # unexpected response, ignore
                 continue
-
-            if ticket['complete'] == '0':
+            if ticket['complete'] == 0:
                 # just skip unfinished tickets
                 continue
-            elif ticket['complete'] == '1':
+            elif ticket['complete'] == 1:
                 # complete
                 photo_id = ticket['photoid']
                 yield (ticket_id, photo_id)
                 tickets.remove(ticket_id)
-            elif ticket['complete'] == '2':
+            elif ticket['complete'] == 2:
                 # failed
                 yield (ticket_id, None)
                 tickets.remove(ticket_id)
