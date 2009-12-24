@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import optparse
 import os
-import sha
+import hashlib
 import sys
 import time
 import ConfigParser
@@ -69,7 +69,7 @@ while tickets:
             print 'Upload complete: %s -> %s' % (path, photo_id)
             f = file(path)
             try:
-                s = sha.new()
+                s = hashlib.sha1()
                 while True:
                     data = f.read(32768)
                     if not data:

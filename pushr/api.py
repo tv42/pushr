@@ -1,5 +1,5 @@
+import hashlib
 import httplib
-import md5
 import mimetools
 import mimetypes
 import simplejson
@@ -23,7 +23,7 @@ class FlickrAPI(object):
         super(FlickrAPI, self).__init__(**kw)
 
     def sign(self, **kw):
-        m = md5.new()
+        m = hashlib.md5()
         m.update(self.shared_secret)
         params = kw.items()
         params.sort()

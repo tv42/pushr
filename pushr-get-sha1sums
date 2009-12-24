@@ -1,9 +1,9 @@
 #!/usr/bin/python
 import errno
+import hashlib
 import itertools
 import optparse
 import os
-import sha
 import sys
 import urllib
 import ConfigParser
@@ -54,7 +54,7 @@ for page in itertools.count(1):
             url = size['source']
             print >>sys.stderr, 'Fetching %s from %s' % (photo['id'], url)
             f = urllib.urlopen(url)
-            s = sha.new()
+            s = hashlib.sha1()
             while True:
                 data = f.read(32768)
                 if not data:
