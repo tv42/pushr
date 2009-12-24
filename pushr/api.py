@@ -1,6 +1,11 @@
-import md5, urllib, urlparse, mimetools, mimetypes, httplib
-from xml.etree import ElementTree
+import httplib
+import md5
+import mimetools
+import mimetypes
 import simplejson
+import urllib
+import urlparse
+from xml.etree import ElementTree
 
 class FlickrError(Exception):
     """Flickr API failed"""

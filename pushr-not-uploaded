@@ -1,5 +1,10 @@
 #!/usr/bin/python
-import os, sys, errno, urllib, sha, itertools
+import errno
+import itertools
+import os
+import sha
+import sys
+import urllib
 
 FILENAME = 'images.flickr.sha1'
 
